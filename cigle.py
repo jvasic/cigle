@@ -8,6 +8,7 @@ import pprint
 
 (sirina, visina) = (800, 600)
 prozor = pygamebg.open_window(sirina, visina, 'Cigle')
+pg.mouse.set_visible(False)
 
 pg.key.set_repeat(10,10)
 
