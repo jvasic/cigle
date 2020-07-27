@@ -1,16 +1,65 @@
+
 # Cigle --- Jovan Vasić 2020
 
 import random
 import pygame as pg
 import pygamebg
 import math
-import pprint
+import pygame.mixer
+
+pg.mixer.init()
+cigla_zvuk = pg.mixer.Sound("cigla.wav")
+kraj_muzika = pg.mixer.Sound('kraj.wav')
+kraj_muzika.set_volume(0.07)
+#cigla_zvuk.set_volume()
+
+pg.mixer.music.load('logical.mp3')
+pg.mixer.music.set_volume(0.3)
 
 (sirina, visina) = (800, 600)
 prozor = pygamebg.open_window(sirina, visina, 'Cigle')
 pg.mouse.set_visible(False)
 
 pg.key.set_repeat(10,10)
+
+
+promena_brzine = 1
+promena_sirine = -6
+debljina_plocice = 5                                   
+x_plocice = sirina // 2
+y_plocice = visina - 100
+
+r = 8
+(x_loptice, y_loptice) = (x_plocice, y_plocice - r)
+
+debljina_cigle = 28
+sirina_cigle = 46
+od_plafona = 120
+broj_kolona = 15
+
+razmak = 3
+od_zida = (sirina - broj_kolona*sirina_cigle - (broj_kolona - 1)*razmak) // 2
+
+def reset():
+    global kraj_igre, broj_redova, sirina_plocice, v, poeni, preostalo, novi_nivo, lepak, klik, kraj_muzika, nivo, space
+
+    kraj_igre = False
+    nivo = 0
+    broj_redova = nivo + 2
+    sirina_plocice = 100 - promena_sirine
+    v = 7 - promena_brzine
+    poeni = 0
+    preostalo = 2
+
+    novi_nivo = True
+    lepak = True
+    klik = False
+    space = False
+
+    kraj_muzika.stop()
+    pg.mixer.music.play(-1)
+
+reset()
 
 def tekst_ispis(x, y, tekst, velicina):
     font = pg.font.SysFont('Bahnschrift', velicina)
@@ -24,9 +73,8 @@ def tekst_centar(x, y, tekst, velicina):
     (x, y) = (x - sirina_teksta / 2, y - visina_teksta / 2)
     prozor.blit(tekst, (x, y))
 
-promena_brzine = 1
-v = 7 - promena_brzine
-minus_lista = [-1,1]
+def distanca(x1, y1, x2, y2):
+    return math.sqrt((y1-y2)**2+(x1-x2)**2)
 
 def nasumicno_odbijanje():
     global v, vx, vy
@@ -34,33 +82,6 @@ def nasumicno_odbijanje():
     vy = -math.sqrt(v*v - vx*vx)
 
 nasumicno_odbijanje()
-
-promena_sirine = -6
-debljina_plocice = 5                                   
-sirina_plocice = 100 - promena_sirine
-x_plocice = sirina // 2
-y_plocice = visina - 100
-
-r = 8
-(x_loptice, y_loptice) = (x_plocice, y_plocice - r)
-
-novi_nivo = False
-lepak = True
-klik = False
-kraj_igre = False
-
-nivo = 0
-
-debljina_cigle = 28
-sirina_cigle = 46
-od_plafona = 120
-broj_kolona = 15
-broj_redova = nivo + 2
-razmak = 3
-od_zida = (sirina - broj_kolona*sirina_cigle - (broj_kolona - 1)*razmak) // 2
-
-poeni = 0
-preostalo = 2
 
 def nasumicna_boja():
     return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
@@ -72,7 +93,7 @@ def generisi_boje():
         boje.append(nasumicna_boja())
 
 def krugSeceVertikalnuDuz(cx, cy, r, x, y1, y2):
-    if abs(x - cx)<=r and cy>y1 and cy<y2:
+    if abs(x - cx)<=r and cy>=y1 and cy<=y2:
         return True
     else:
         return False
@@ -80,15 +101,22 @@ def krugSeceVertikalnuDuz(cx, cy, r, x, y1, y2):
 def krugSeceHorizontalnuDuz(cx, cy, r, x1, x2, y):
     return krugSeceVertikalnuDuz(cy, cx, r, y, x1, x2)
 
+def krugSeceTacku(cx, cy, r, x, y):
+    return distanca(cx, cy, x, y) < r
+
 cigle = []
 razbijene = []
 
+
+
 def crtaj():
-    global x_plocice, x_loptice, novi_nivo, y_loptice, kraj_igre
+    global x_plocice, x_loptice, novi_nivo, y_loptice, kraj_igre, space, razbijene
     prozor.fill(pg.Color('black'))
 
-    if kraj_igre:
-        if nivo == 9:
+    if kraj_igre:  
+        pg.mixer.music.stop()
+        kraj_muzika.play()
+        if nivo == 11:
             tekst_centar(sirina/2, visina/2, 'GAME WON!!! '+str(poeni)+' points', 70)
         else:
             tekst_centar(sirina/2, visina/2, 'GAME OVER: '+str(poeni)+' points', 70)
@@ -102,7 +130,7 @@ def crtaj():
         if x_plocice - sirina_plocice/2 > sirina - sirina_plocice:
             x_plocice = sirina - sirina_plocice/2
         pg.draw.line(prozor, pg.Color('white'),
-                     (x_plocice - sirina_plocice // 2, y_plocice),            #
+                     (x_plocice - sirina_plocice // 2, y_plocice),            
                      (x_plocice + sirina_plocice // 2, y_plocice), debljina_plocice)
         if lepak:
             x_loptice = x_plocice
@@ -124,11 +152,11 @@ def crtaj():
                 
         if preostalo<0:
             kraj_igre = True
-        if nivo == 9:
+        if nivo == 11:
             kraj_igre = True
             
 def obradi_dogadjaj(dogadjaj):
-    global x_plocice, x_loptice, y_loptice, vx, vy, klik, kraj_igre
+    global x_plocice, x_loptice, y_loptice, vx, vy, klik, kraj_igre, space
     if not kraj_igre:
         if dogadjaj.type == pg.MOUSEMOTION:
             (x_misa, y_misa) = dogadjaj.pos
@@ -137,41 +165,54 @@ def obradi_dogadjaj(dogadjaj):
         if lepak:
             if dogadjaj.type == pg.MOUSEBUTTONDOWN:
                 klik = True
+                
+    if dogadjaj.type == pg.KEYDOWN:
+        if dogadjaj.key == pg.K_SPACE:
+            space = True
+
+    if dogadjaj.type == pg.KEYUP:
+        if dogadjaj.key == pg.K_SPACE:
+            space = False
 
             
 def novi_frejm():
     global x_loptice, y_loptice, lepak, vx, vy, v, sirina, visina, preostalo, r, razmak, sirina_cigle, x_plocice, sirina_plocice
-    global broj_redova, broj_kolona, od_zida, od_plafona, debljina_cigle, cigle, razbijene, novi_nivo, poeni, klik, nivo
+    global broj_redova, broj_kolona, od_zida, od_plafona, debljina_cigle, cigle, razbijene, novi_nivo, poeni, klik, nivo, kraj_igre, space
     global promena_sirine, promena_brzine
     if preostalo < 0 or nivo == 9:
         kraj_igre = True
 
     if len(razbijene) == len(cigle):
         novi_nivo = True
-    
-    if novi_nivo:                   #NOVI NIVO
+        
+    if novi_nivo:           #NOVI NIVO
+        lepak = True
         nivo += 1
         broj_redova += 1
         generisi_boje()
         razbijene = []
         cigle = []
         sirina_plocice += promena_sirine
-        v += promena_brzine
-        
+        v += 1
+
         for i in range(broj_redova):
             for j in range(broj_kolona):
                 cigle.append((j*(sirina_cigle + razmak) + od_zida, od_plafona + (i - 1)*(debljina_cigle + razmak)))
         lepak = True
         novi_nivo = False
 
-    if x_loptice - r < 0:           #odbijanje od zidova
+    if kraj_igre and space:
+        reset()
+    
+
+    if x_loptice - r <= 0:           #odbijanje od zidova
         vx = -vx
-    if x_loptice + r > sirina:
+    if x_loptice + r >= sirina:
         vx = -vx
-    if y_loptice - r < 0:
+    if y_loptice - r <= 0:
         vy = -vy
 
-    if y_loptice + r == y_plocice and x_loptice > x_plocice-sirina_plocice//2 and x_loptice < x_plocice+sirina_plocice//2:
+    if distanca(x_loptice, y_loptice, x_loptice, y_plocice) <= r and x_loptice >= x_plocice-sirina_plocice/2 and x_loptice <= x_plocice+sirina_plocice/2:    #odbijanje od plocice
         if lepak and klik:
             nasumicno_odbijanje()
             lepak = False
@@ -179,12 +220,12 @@ def novi_frejm():
         else:
             vx = (x_loptice - x_plocice)/sirina_plocice*2*0.95*v
             vy = -math.sqrt(v**2 - vx*vx)
-
-    #odbijanje od coska plocice        
-    #if (x_plocice - sirina_plocice/2 - x_loptice)**2 + (y_plocice - y_loptice)**2 == r**2 or\
-     #  (x_plocice + sirina_plocice/2 - x_loptice)**2 + (y_plocice - y_loptice)**2 == r**2:
-     #   vx = -vx
-     #   vy = -vy
+    if distanca(x_loptice, y_loptice, x_plocice - sirina_plocice/2, y_plocice)<=r:
+        vx = -0.97*v
+        vy = -math.sqrt(v**2 - vx*vx)
+    if distanca(x_loptice, y_loptice, x_plocice + sirina_plocice/2, y_plocice)<=r:
+        vx = 0.97*v
+        vy = -math.sqrt(v**2 - vx*vx)
         
     if y_loptice > visina:          #ako loptica padne u rupu
         preostalo = preostalo - 1
@@ -193,36 +234,56 @@ def novi_frejm():
     
     for a in range(broj_redova):
             for b in range(broj_kolona):
-                if (a,b) not in razbijene:
-                    (x_cigle, y_cigle) = cigle[a*broj_kolona + b]
-
+                (x_cigle, y_cigle) = cigle[a*broj_kolona + b]
+                if (a,b) not in razbijene and not novi_nivo:
+                    
                     if (krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle, y_cigle, y_cigle + debljina_cigle) or \
                     krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle + sirina_cigle, y_cigle, y_cigle + debljina_cigle)) and \
                     (krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle + debljina_cigle) or \
                     krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle)):
-                        vy = -vy
-                        vx = -vx
-                        razbijene.append((a, b))
-                        poeni += 10
+                        
+                        if (krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak, y_cigle, y_cigle + debljina_cigle) or \
+                    krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak + sirina_cigle, y_cigle, y_cigle + debljina_cigle)) and \
+                    (krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak, x_cigle+sirina_cigle+razmak + sirina_cigle, y_cigle + debljina_cigle) or \
+                    krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak, x_cigle+sirina_cigle+razmak + sirina_cigle, y_cigle)):
+                            vy = -vy
+                            cigla_zvuk.play()
+                            razbijene.append((a, b))
+                            poeni += 10
+                        elif (krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle, y_cigle+debljina_cigle+razmak, y_cigle+debljina_cigle+razmak + debljina_cigle) or \
+                    krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle + sirina_cigle, y_cigle+debljina_cigle+razmak, y_cigle+debljina_cigle+razmak + debljina_cigle)) and \
+                    (krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle+debljina_cigle+razmak + debljina_cigle) or \
+                    krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle+debljina_cigle+razmak)):
+                            vx = -vx
+                            cigla_zvuk.play()
+                            razbijene.append((a, b))
+                            poeni += 10
+                        else:
+                            vy = -vy
+                            vx = -vx
+                            cigla_zvuk.play()
+                            razbijene.append((a, b))
+                            poeni += 10
 
-                    else:
+                    else:              
                         if krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle, y_cigle, y_cigle + debljina_cigle) or \
                         krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle + sirina_cigle, y_cigle, y_cigle + debljina_cigle):              
-                            
+                            cigla_zvuk.play()
                             razbijene.append((a, b))
                             poeni += 10
                             vx = -vx
                             
                         if krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle + debljina_cigle) or \
                         krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle):
+                            cigla_zvuk.play()
                             razbijene.append((a, b))
                             poeni += 10
                             vy = -vy
-                        
+                    
     if not lepak:
         x_loptice += vx
         y_loptice += vy
-        
+
     crtaj()
 
 
