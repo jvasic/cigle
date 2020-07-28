@@ -1,4 +1,3 @@
-
 # Cigle --- Jovan Vasić 2020
 
 import random
@@ -6,6 +5,7 @@ import pygame as pg
 import pygamebg
 import math
 import pygame.mixer
+import pprint
 
 pg.mixer.init()
 cigla_zvuk = pg.mixer.Sound("cigla.wav")        #muzike
@@ -20,7 +20,6 @@ pg.mouse.set_visible(False)
 
 pg.key.set_repeat(10,10)        #nepotrebno za sad
 
-
 promena_brzine = 1              #kad se predje na novi nivo
 promena_sirine = -6             #menja se brzina i sirina ploce
 debljina_plocice = 5                                   
@@ -30,18 +29,24 @@ y_plocice = visina - 100
 r = 8
 (x_loptice, y_loptice) = (x_plocice, y_plocice - r)
 
-debljina_cigle = 28
+visina_cigle = 28
 sirina_cigle = 46
 od_plafona = 120
 broj_kolona = 15
-
 razmak = 3
 od_zida = (sirina - broj_kolona*sirina_cigle - (broj_kolona - 1)*razmak) // 2
+
+manja_loptica, veca_loptica, manja_plocica, veca_plocica, prolazak, usporena, ubrzana, smrt, zivot = False, False, False, False, False, False, False, False, False
+powerups = [manja_loptica, veca_loptica, manja_plocica, veca_plocica, prolazak, usporena, ubrzana, smrt, zivot]
+power_verovatnoca = 10    #10%
+def no_powerups():
+    global powerups
+    for i in range(len(powerups)):
+        powerups[i] =  False
 
 def reset():
     #pocetne vrednosti
     global kraj_igre, broj_redova, sirina_plocice, v, poeni, preostalo, novi_nivo, lepak, klik, kraj_muzika, nivo, space
-
     kraj_igre = False
     nivo = 0
     broj_redova = nivo + 2
@@ -54,7 +59,7 @@ def reset():
     klik = False
     space = False
     kraj_muzika.stop()
-    pg.mixer.music.play(-1)
+    pg.mixer.music.play(-1) #muzika se cuje konstantno
 
 reset() #pocetak igre
 
@@ -101,6 +106,19 @@ def krugSeceHorizontalnuDuz(cx, cy, r, x1, x2, y):
 def krugSeceTacku(cx, cy, r, x, y):
     return distanca(cx, cy, x, y) < r
 
+def power_v():
+    global power_verovatnoca
+    return random.choices((True, False), weights=(power_verovatnoca, 100-power_verovatnoca))
+
+def razbij_ciglu(a, b):
+    global cigla_zvuk, poeni, razbijene, power_cigle
+    cigla_zvuk.play()
+    poeni += 10
+    if (a, b) not in power_cigle:   #cigla vise ne postoji
+        razbijene.append((a, b))
+    else:
+        power_cigle.remove((a, b))
+     
 cigle = []
 razbijene = []
 
@@ -137,9 +155,17 @@ def crtaj():
             boja_reda = boje[i]
             for j in range(broj_kolona):
                 if not (i,j) in razbijene:
+                    if (i,j) in power_cigle:
+                        debljina_cigle = 0
+                        lokalna_sirina_cigle = sirina_cigle + 1
+                        lokalna_visina_cigle = visina_cigle + 1
+                    else:
+                        debljina_cigle = 2
+                        lokalna_sirina_cigle = sirina_cigle
+                        lokalna_visina_cigle = visina_cigle
                     pg.draw.rect(prozor, boja_reda,
-                                 (j*(sirina_cigle + razmak) + od_zida, od_plafona + (i - 1)*(debljina_cigle + razmak),
-                                  sirina_cigle, debljina_cigle), 2)
+                                 (j*(sirina_cigle + razmak) + od_zida, od_plafona + (i - 1)*(visina_cigle + razmak),
+                                  lokalna_sirina_cigle, lokalna_visina_cigle), debljina_cigle)
             
         tekst_ispis(14, 7, str(poeni), 50)
         if preostalo>0:
@@ -156,11 +182,10 @@ def obradi_dogadjaj(dogadjaj):
     if not kraj_igre:
         if dogadjaj.type == pg.MOUSEMOTION:
             (x_misa, y_misa) = dogadjaj.pos
-            x_plocice = x_misa    #pomeranje plocice misem
-            
-        if lepak:
-            if dogadjaj.type == pg.MOUSEBUTTONDOWN:
-                klik = True
+            x_plocice = x_misa    #pomeranje plocice misem            
+        #if lepak:
+        if dogadjaj.type == pg.MOUSEBUTTONDOWN:
+            klik = True
                 
     if dogadjaj.type == pg.KEYDOWN:
         if dogadjaj.key == pg.K_SPACE:
@@ -173,8 +198,8 @@ def obradi_dogadjaj(dogadjaj):
             
 def novi_frejm():
     global x_loptice, y_loptice, lepak, vx, vy, v, sirina, visina, preostalo, r, razmak, sirina_cigle, x_plocice, sirina_plocice
-    global broj_redova, broj_kolona, od_zida, od_plafona, debljina_cigle, cigle, razbijene, novi_nivo, poeni, klik, nivo, kraj_igre, space
-    global promena_sirine, promena_brzine
+    global broj_redova, broj_kolona, od_zida, od_plafona, visina_cigle, cigle, razbijene, novi_nivo, poeni, klik, nivo, kraj_igre, space
+    global promena_sirine, promena_brzine, power_verovatnoca, power_cigle
     if preostalo < 0 or nivo == 9:
         kraj_igre = True    #izgubljeni svi zivoti/poslednji nivo
 
@@ -188,18 +213,22 @@ def novi_frejm():
         generisi_boje()
         razbijene = []
         cigle = []
+        power_cigle = []
         sirina_plocice += promena_sirine
         v += 1
+        pomoc = random.choices((True, False), weights=(power_verovatnoca, 100-power_verovatnoca), k=broj_redova*broj_kolona)
         for i in range(broj_redova):
             for j in range(broj_kolona):
-                cigle.append((j*(sirina_cigle + razmak) + od_zida, od_plafona + (i - 1)*(debljina_cigle + razmak)))
+                cigle.append((j*(sirina_cigle + razmak) + od_zida, od_plafona + (i - 1)*(visina_cigle + razmak)))                
+                if pomoc[i*broj_redova+j] == True:
+                    power_cigle.append((i, j))
         lepak = True
         novi_nivo = False
+        no_powerups()
 
     if kraj_igre and space:     #press space to play again
         reset()
     
-
     if x_loptice - r <= 0:           #odbijanje od zidova
         vx = -vx
     if x_loptice + r >= sirina:
@@ -211,7 +240,7 @@ def novi_frejm():
         if lepak and klik:
             nasumicno_odbijanje()
             lepak = False
-            klik = False
+            klik = False  
         else:
             vx = (x_loptice - x_plocice)/sirina_plocice*2*0.95*v        #loptica se odbija u zavisnosti od mesta na plocici kojw je pogodjeno, max 95% brzine po x (jednoj) osi
             vy = -math.sqrt(v**2 - vx*vx)
@@ -232,53 +261,42 @@ def novi_frejm():
                 (x_cigle, y_cigle) = cigle[a*broj_kolona + b]
                 if (a,b) not in razbijene and not novi_nivo:
                 #svaka preostala cigla se proverava da li je pogodjena     
-                    if (krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle, y_cigle, y_cigle + debljina_cigle) or \
-                    krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle + sirina_cigle, y_cigle, y_cigle + debljina_cigle)) and \
-                    (krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle + debljina_cigle) or \
+                    if (krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle, y_cigle, y_cigle + visina_cigle) or \
+                    krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle + sirina_cigle, y_cigle, y_cigle + visina_cigle)) and \
+                    (krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle + visina_cigle) or \
                     krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle)):
                         #ako je pogodjen cosak cigle
-                        if (krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak, y_cigle, y_cigle + debljina_cigle) or \
-                    krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak + sirina_cigle, y_cigle, y_cigle + debljina_cigle)) and \
-                    (krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak, x_cigle+sirina_cigle+razmak + sirina_cigle, y_cigle + debljina_cigle) or \
+                        if (krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak, y_cigle, y_cigle + visina_cigle) or \
+                    krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak + sirina_cigle, y_cigle, y_cigle + visina_cigle)) and \
+                    (krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak, x_cigle+sirina_cigle+razmak + sirina_cigle, y_cigle + visina_cigle) or \
                     krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle+sirina_cigle+razmak, x_cigle+sirina_cigle+razmak + sirina_cigle, y_cigle)):
                             #ako su pogodjena 2 coska istovremeno, odbija se kao od prave linije (valjda)
                             vy = -vy    #suprotna y komponenta brzine - odbija se na dole/gore
-                            cigla_zvuk.play()   #zvuk lomljenja cigle
-                            razbijene.append((a, b))    #cigla vise ne postoji
-                            poeni += 10     #dodato 10 poena
-                        elif (krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle, y_cigle+debljina_cigle+razmak, y_cigle+debljina_cigle+razmak + debljina_cigle) or \
-                    krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle + sirina_cigle, y_cigle+debljina_cigle+razmak, y_cigle+debljina_cigle+razmak + debljina_cigle)) and \
-                    (krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle+debljina_cigle+razmak + debljina_cigle) or \
-                    krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle+debljina_cigle+razmak)):
+                            razbij_ciglu(a,b)    
+                        elif (krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle, y_cigle+visina_cigle+razmak, y_cigle+visina_cigle+razmak + visina_cigle) or \
+                    krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle + sirina_cigle, y_cigle+visina_cigle+razmak, y_cigle+visina_cigle+razmak + visina_cigle)) and \
+                    (krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle+visina_cigle+razmak + visina_cigle) or \
+                    krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle+visina_cigle+razmak)):
                             #isto samo vertikalno
                             vx = -vx    #suprotna x komponenta brzine - odbija se levo/desno
-                            cigla_zvuk.play()
-                            razbijene.append((a, b))
-                            poeni += 10
+                            razbij_ciglu(a,b)
                         else:
                             #samo je jedan cosak pogodjen, vraca se se odakle je dosla
                             vy = -vy    #suprotna brzina
                             vx = -vx
-                            cigla_zvuk.play()
-                            razbijene.append((a, b))
-                            poeni += 10
-
+                            razbij_ciglu(a,b)
                     else:              
                         #ako nije cosak
-                        if krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle, y_cigle, y_cigle + debljina_cigle) or \
-                        krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle + sirina_cigle, y_cigle, y_cigle + debljina_cigle):        
+                        if krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle, y_cigle, y_cigle + visina_cigle) or \
+                        krugSeceVertikalnuDuz(x_loptice, y_loptice, r, x_cigle + sirina_cigle, y_cigle, y_cigle + visina_cigle):        
                             #ako je pogodjena leva/desna stranica cigle
-                            cigla_zvuk.play()
-                            razbijene.append((a, b))
-                            poeni += 10
+                            razbij_ciglu(a,b)
                             vx = -vx
                             
-                        if krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle + debljina_cigle) or \
+                        if krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle + visina_cigle) or \
                         krugSeceHorizontalnuDuz(x_loptice, y_loptice, r, x_cigle, x_cigle + sirina_cigle, y_cigle):
                             #ako je pogodjena gornja/donja stranica
-                            cigla_zvuk.play()
-                            razbijene.append((a, b))
-                            poeni += 10
+                            razbij_ciglu(a,b)
                             vy = -vy
                     
     if not lepak:
