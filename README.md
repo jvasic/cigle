@@ -1,2 +1,2 @@
-# cigle - igrica
-poboljsano odbijanje loptice i dodata muzika
+# cigle
+Breakout clone igrica
