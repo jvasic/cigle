@@ -179,9 +179,7 @@ def crtaj():
         pg.draw.line(prozor, pg.Color('white'),   #plocica
                      (x_plocice - sirina_plocice // 2, y_plocice),            
                      (x_plocice + sirina_plocice // 2, y_plocice), debljina_plocice)
-        if lepak:  
-            x_loptice = x_plocice
-            y_loptice = y_plocice - r
+        
         pg.draw.circle(prozor, pg.Color('white'), (round(x_loptice), round(y_loptice)), r)
         
         for i in range(broj_redova): #crtanje nerazbijenih cigli
@@ -236,7 +234,10 @@ def novi_frejm():
 
     if len(razbijene) == len(cigle):   #kraj nivoa kad su razbijene sve cigle
         novi_nivo = True
-        
+        lepak = True
+    if lepak:  
+        x_loptice = x_plocice
+        y_loptice = y_plocice - r
     if novi_nivo:           #NOVI NIVO
         lepak = True
         nivo += 1
