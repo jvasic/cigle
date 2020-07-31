@@ -19,7 +19,7 @@ pg.mixer.music.set_volume(0.3)
 
 (sirina, visina) = (800, 600)               
 prozor = pygamebg.open_window(sirina, visina, 'Cigle')
-pg.mouse.set_visible(False)
+#pg.mouse.set_visible(False)
 
 pg.key.set_repeat(10,10)        #nepotrebno za sad
 
@@ -43,7 +43,7 @@ od_zida = (sirina - broj_kolona*sirina_cigle - (broj_kolona - 1)*razmak) // 2
 manja_loptica, veca_loptica, manja_plocica, veca_plocica, prolazak, usporenje, ubrzanje, smrt, zivot = 0, 0, 0, 0, 0, 0, 0, 0, 0
 powerups = [manja_loptica, veca_loptica, manja_plocica, veca_plocica, prolazak, usporenje, ubrzanje, smrt, zivot]
 string_powerups = ['manja loptica', 'veća loptica', 'manja pločica', 'veća pločica', 'prolazak', 'usporenje', 'ubrzanje', 'smrt', 'život']
-power_verovatnoca = 50    #n%
+power_verovatnoca = 10   #n%
 def no_powerups():
     global powerups
     for i in range(len(powerups)):
@@ -135,14 +135,14 @@ def razbij_ciglu(a, b):
         power_animacije.append((b*(sirina_cigle + razmak) + od_zida - sirina_cigle/2, od_plafona + (a - 1)*(visina_cigle + razmak), (random.randint(0, len(powerups)-1))))
         
 def crtaj_powerup():
-    global power_animacije, visina, powerups, sirina_plocice, x_plocice, y_plocice, r
+    global power_animacije, visina, powerups, sirina_plocice, nivo, x_plocice, y_plocice, r
     for i in range (len(power_animacije)):
         (x, y, index) = power_animacije[-i]
         if x < 30:
             x = 30
         if x > sirina-30:
             x = sirina - 30
-        y += 2.5
+        y += 3 + nivo*0.5
         power_animacije[-i] = (x, y, index)
         if x >= x_plocice-sirina_plocice/2 and x <= x_plocice+sirina_plocice/2 and y >= y_plocice - 3 and y <= y_plocice + 1:
             powerups[index] += 1
@@ -160,8 +160,7 @@ razbijene = []
 def crtaj():
     global x_plocice, x_loptice, novi_nivo, y_loptice, kraj_igre, space, razbijene, r, sirina_plocice
     prozor.fill(pg.Color('black'))
-
-    if kraj_igre:  
+    if kraj_igre:
         pg.mixer.music.stop()
         kraj_muzika.play()
         if nivo == 11:
@@ -261,7 +260,7 @@ def novi_frejm():
         r = ro
         v = vo + promena_brzine*(nivo-1)
         sirina_plocice = sirina_plocice_o + promena_sirine*(nivo-1)
-        
+        prolazak = False
     if kraj_igre and space:     #press space to play again
         reset()
     
